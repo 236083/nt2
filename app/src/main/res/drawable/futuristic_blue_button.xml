@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 押されたときの状態: 濃い青に変化し、押下感を出す -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <gradient
+                android:angle="0"
+                android:startColor="#005599"
+                android:endColor="#0088CC"
+                android:type="linear" />
+            <stroke android:width="3dp" android:color="#FFFFFF" />
+        </shape>
+    </item>
+    <!-- 通常の状態: 未来的な青いグラデーションと明るい青のアウトライン -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <!-- 未来的なグラデーション -->
+            <gradient
+                android:angle="45"
+                android:startColor="#0077C7"
+                android:endColor="#00AEEF"
+                android:type="linear" />
+            <!-- 光るアウトラインをシミュレートする明るい青のストローク -->
+            <stroke android:width="3dp" android:color="#80DEEA" />
+        </shape>
+    </item>
+</selector>

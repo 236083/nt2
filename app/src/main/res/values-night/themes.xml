@@ -1,0 +1,22 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.Nt2" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/blue</item>
+        <item name="colorPrimaryVariant">@color/blue</item>
+        <item name="android:statusBarColor">@color/blue</item>
+    </style>
+
+    <style name="Theme.Nt2" parent="Base.Theme.Nt2" />
+
+    <style name="ShapeAppearance.App.CornerSize50Percent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="App.Custom.Indicator" parent="">
+        <item name="android:color">@color/yellow</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.CornerSize50Percent</item>
+        <item name="android:width">48dp</item>
+        <item name="android:height">48dp</item>
+    </style>
+
+</resources>
