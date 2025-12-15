@@ -23,6 +23,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
+
             <ImageView
                 android:id="@+id/app_logo_image"
                 android:layout_width="104dp"
@@ -33,10 +34,10 @@
                 android:src="@drawable/applog2"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="0.469"
+                app:layout_constraintHorizontal_bias="0.452"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.186"
+                app:layout_constraintVertical_bias="0.505"
                 tools:src="@drawable/applog2" />
 
             <ImageButton
@@ -64,36 +65,64 @@
             android:layout_marginEnd="24dp"
             android:background="@drawable/card_block_background"
             android:elevation="10dp"
-            android:paddingTop="16dp"  android:paddingBottom="16dp" app:layout_constraintEnd_toEndOf="parent"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/header_container">
+
             <EditText
                 android:id="@+id/edit_search"
-                android:layout_width="0dp"
-                android:layout_height="50dp"
+                android:layout_width="280dp"
+                android:layout_height="54dp"
                 android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="80dp"
                 android:background="@drawable/search_bar_background_inner"
+                android:drawableEnd="@drawable/outline_cancel_24"
+                android:drawablePadding="8dp"
                 android:hint="Tシャツ、パンツ など"
+                android:imeOptions="actionSearch"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
+                android:singleLine="true"
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <LinearLayout
-                android:id="@+id/layout_brands"
+            <ImageButton
+                android:id="@+id/button_filter"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="24dp"
+                android:adjustViewBounds="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="絞り込みボタン"
+                android:scaleType="fitCenter"
+                android:src="@drawable/shibori511_s_f"
+                android:tint="#333333"
+                app:layout_constraintBottom_toBottomOf="@+id/edit_search"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/edit_search" />
+
+            <HorizontalScrollView
+                android:id="@+id/scroll_brands"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:gravity="center_horizontal"
-                android:orientation="horizontal"
+                android:scrollbars="none"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/edit_search">
 
-                <TextView
+                <LinearLayout
+                    android:id="@+id/layout_brands"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="start"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"  android:paddingEnd="16dp">   <TextView
                     android:id="@+id/text_brand_gu"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -103,38 +132,61 @@
                     android:padding="4dp"
                     android:text="GU"
                     android:textSize="14sp" />
-                <TextView
-                    android:id="@+id/text_brand_uniqlo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="4dp"
-                    android:text="ユニクロ"
-                    android:textSize="14sp" />
+                    <TextView
+                        android:id="@+id/text_brand_uniqlo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="4dp"
+                        android:text="ユニクロ"
+                        android:textSize="14sp" />
 
-                <TextView
-                    android:id="@+id/text_brand_amazon"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="4dp"
-                    android:text="Amazon"
-                    android:textSize="14sp" />
-                <TextView
-                    android:id="@+id/text_brand_zozo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:padding="4dp"
-                    android:text="ZOZO"
-                    android:textSize="14sp" />
+                    <TextView
+                        android:id="@+id/text_brand_amazon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="4dp"
+                        android:text="Amazon"
+                        android:textSize="14sp" />
 
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_brand_zozo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp" android:clickable="true"
+                        android:focusable="true"
+                        android:padding="4dp"
+                        android:text="ZOZO"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/text_brand_rakuten"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="4dp"
+                        android:text="楽天"
+                        android:textSize="14sp" />
+                    <TextView
+                        android:id="@+id/text_brand_grl"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="4dp"
+                        android:text="GRL"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+            </HorizontalScrollView>
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <androidx.constraintlayout.widget.ConstraintLayout
