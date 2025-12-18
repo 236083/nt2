@@ -1,5 +1,7 @@
 package com.example.nt2
 
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -19,25 +21,33 @@ import androidx.core.content.ContextCompat
 import android.text.TextWatcher
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
+import android.provider.MediaStore
+import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import android.view.MotionEvent
+import android.content.res.ColorStateList
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 
 class HomeFragment : Fragment() {
 
-    // SharedPreferencesに保存するキー
     private val PREFS_NAME = "OmikujiPrefs"
     private val KEY_LAST_DRAW_TIME = "last_draw_time"
     private val KEY_LAST_RESULT = "last_omikuji_result"
 
-    // UIとデータのメンバー変数
+    private val REQUEST_IMAGE_CAPTURE = 1
+    private val PERMISSION_REQUEST_CODE = 100
+
     private lateinit var searchEditText: EditText
     private lateinit var btnDrawOmikuji: Button
     private lateinit var textOmikujiResult: TextView
+    private lateinit var textCooldownTimer: TextView // 次回までの時間を表示用
     private lateinit var btnStartAiChat: Button
     private lateinit var sharedPrefs: SharedPreferences
-
-    // ★ 修正・追加: 絞り込みボタン
     private lateinit var buttonFilter: ImageButton
+    private lateinit var cameraButton: ImageButton
 
-    // おみくじの結果リスト (ファッション運に合わせたメッセージ)
     private val omikujiResults = listOf(
         "大吉！今日は最高のファッション日和です。新しいコーディネートに挑戦しましょう！",
         "吉！素敵な出会いがありそうです。アクセントカラーを身につけましょう。",
@@ -47,101 +57,49 @@ class HomeFragment : Fragment() {
         "凶…今日は慎重に。地味な色が失敗を避けられます。安全第一！"
     )
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_home, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // UI要素の初期化
         val btngallery : ImageButton = view.findViewById(R.id.button_my_gallery)
         searchEditText = view.findViewById(R.id.edit_search)
         btnDrawOmikuji = view.findViewById(R.id.btn_draw_omikuji)
         textOmikujiResult = view.findViewById(R.id.text_omikuji_result)
+        textCooldownTimer = view.findViewById(R.id.text_cooldown_timer) // XMLにこのIDが必要です
         btnStartAiChat = view.findViewById(R.id.btn_ai_chat)
-
-        // ★ 追加: 絞り込みボタンの初期化
         buttonFilter = view.findViewById(R.id.button_filter)
+        cameraButton = view.findViewById(R.id.camera_button)
 
-        // SharedPreferencesの初期化
         sharedPrefs = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // クリックリスナーの設定
         btngallery.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, GalleryFragment()) // ※ GalleryFragmentが存在することを前提
-                .addToBackStack(null)
-                .commit()
+            parentFragmentManager.beginTransaction().replace(R.id.fragment_container, GalleryFragment()).addToBackStack(null).commit()
         }
-
         btnStartAiChat.setOnClickListener {
-            parentFragmentManager.beginTransaction()
-                .replace(R.id.fragment_container, AiChatFragment()) // ※ AiChatFragmentが存在することを前提
-                .addToBackStack(null)
-                .commit()
+            parentFragmentManager.beginTransaction().replace(R.id.fragment_container, AiChatFragment()).addToBackStack(null).commit()
+        }
+        buttonFilter.setOnClickListener { showCategoryFilterDialog() }
+        cameraButton.setOnClickListener { checkCameraPermissionAndDispatch() }
+
+        // おみくじ結果表示部分のクリックイベント（詳細ポップアップ）
+        textOmikujiResult.setOnClickListener {
+            val lastResult = sharedPrefs.getString(KEY_LAST_RESULT, null)
+            if (!lastResult.isNullOrBlank()) {
+                showFashionFortuneDialog(lastResult)
+            }
         }
 
-        //  絞り込みボタンのクリックリスナー
-        buttonFilter.setOnClickListener {
-            showCategoryFilterDialog() // カテゴリ選択ダイアログを表示する
-        }
-
-        // 各種機能の設定
         setupSearchListeners()
-        setupBrandButtons(view) // ★ 修正済み
+        setupBrandButtons(view)
         setupOmikuji()
-
-        // クリアボタン機能の設定
         setupClearButtonFunctionality()
-
-        // 初期状態でボタンの有効/無効をチェック
         checkOmikujiCooldown()
     }
 
-
-    private fun setupClearButtonFunctionality() {
-        // 1. テキスト変更リスナーの設定 (入力されたらクリアボタンを表示/非表示)
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: android.text.Editable?) {
-                // テキストが空でなければ、右側にクリアアイコンを設定
-                val icon = if (s.isNullOrEmpty()) null else
-                    ContextCompat.getDrawable(requireContext(), R.drawable.outline_cancel_24) // ic_clear がない場合は R.drawable.baseline_clear_24 などを使用
-
-                // 右側のDrawableを更新
-                searchEditText.setCompoundDrawablesWithIntrinsicBounds(null, null, icon, null)
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-
-        // 2. タッチリスナーの設定 (クリアボタンがタップされたらテキストをクリア)
-        searchEditText.setOnTouchListener { v, event ->
-            if (event.action == android.view.MotionEvent.ACTION_UP) {
-                // DrawableRight (配列のインデックス 2) を取得
-                val drawableEnd = searchEditText.compoundDrawables[2]
-
-                if (drawableEnd != null) {
-                    val drawableWidth = drawableEnd.bounds.width()
-
-                    // タップ位置 (event.rawX) が EditText の右端からDrawableの領域内にあるかチェック
-                    // rawX >= (EditTextの右端 - Drawableの幅 - EditTextの右パディング)
-                    if (event.rawX >= (searchEditText.right - drawableWidth - searchEditText.paddingEnd)) {
-                        searchEditText.text.clear()
-                        // イベントを消費し、EditTextへのデフォルトのタッチ処理を停止
-                        return@setOnTouchListener true
-                    }
-                }
-            }
-            // Drawableをタップしていない場合は、デフォルトの処理を続行
-            false
-        }
-    }
-    // --- おみくじ機能 (変更なし) ---
-
+    // --- おみくじ関連 ---
     private fun setupOmikuji() {
         btnDrawOmikuji.setOnClickListener {
             drawOmikuji()
@@ -149,14 +107,15 @@ class HomeFragment : Fragment() {
     }
 
     private fun drawOmikuji() {
-        val result = omikujiResults[Random.nextInt(omikujiResults.size)]
-        textOmikujiResult.text = "本日のファッション運:\n$result"
-        showToast("おみくじを引きました！")
+        val res = omikujiResults[Random.nextInt(omikujiResults.size)]
+        // 結果のテキスト更新（詳細への誘導を追加）
+        textOmikujiResult.text = "本日の結果: ${res.substringBefore("！")}\n(タップで詳細を表示)"
 
-        val currentTime = System.currentTimeMillis()
+        showFashionFortuneDialog(res)
+
         sharedPrefs.edit()
-            .putLong(KEY_LAST_DRAW_TIME, currentTime)
-            .putString(KEY_LAST_RESULT, result)
+            .putLong(KEY_LAST_DRAW_TIME, System.currentTimeMillis())
+            .putString(KEY_LAST_RESULT, res)
             .apply()
 
         checkOmikujiCooldown()
@@ -164,189 +123,189 @@ class HomeFragment : Fragment() {
 
     private fun checkOmikujiCooldown() {
         val lastDrawTime = sharedPrefs.getLong(KEY_LAST_DRAW_TIME, 0L)
+        val lastResult = sharedPrefs.getString(KEY_LAST_RESULT, "")
         val currentTime = System.currentTimeMillis()
-        val cooldownPeriod = TimeUnit.HOURS.toMillis(24)
-        val lastResult = sharedPrefs.getString(KEY_LAST_RESULT, null)
+        val cooldownPeriod = 86400000L // 24時間
 
         if (currentTime - lastDrawTime >= cooldownPeriod) {
+            // 占い可能な状態
             btnDrawOmikuji.isEnabled = true
             btnDrawOmikuji.alpha = 1.0f
-            btnDrawOmikuji.text = "おみくじを引く"
-            if (!lastResult.isNullOrBlank()) {
-                textOmikujiResult.text = "前回結果:\n$lastResult\n\n今日はもう一度占えます！"
+            btnDrawOmikuji.text = "占う"
+            textCooldownTimer.visibility = View.GONE
+
+            if (lastResult.isNullOrEmpty()) {
+                textOmikujiResult.text = "今日の運勢を占ってみよう！"
             } else {
-                textOmikujiResult.text = "ボタンを押して今日のファッション運を占おう！"
+                textOmikujiResult.text = "前回の結果: ${lastResult.substringBefore("！")}\nもう一度占えます！"
             }
         } else {
+            // 占い済み（クールダウン中）
             btnDrawOmikuji.isEnabled = false
             btnDrawOmikuji.alpha = 0.5f
-            val elapsed = currentTime - lastDrawTime
-            val remainingTimeMillis = cooldownPeriod - elapsed
-            val remainingHours = TimeUnit.MILLISECONDS.toHours(remainingTimeMillis)
-            val remainingMinutes = TimeUnit.MILLISECONDS.toMinutes(remainingTimeMillis) % 60
-            btnDrawOmikuji.text = "クールダウン中"
-            if (!lastResult.isNullOrBlank()) {
-                textOmikujiResult.text = "本日の結果:\n$lastResult\n\n次に引けるまで: ${remainingHours}時間 ${remainingMinutes}分\n(1日1回限定)"
-            } else {
-                textOmikujiResult.text = "次に引けるまで: ${remainingHours}時間 ${remainingMinutes}分\n(1日1回限定)"
+            btnDrawOmikuji.text = "済"
+
+            // 残り時間の計算
+            val timeLeft = cooldownPeriod - (currentTime - lastDrawTime)
+            val hours = TimeUnit.MILLISECONDS.toHours(timeLeft)
+            val minutes = TimeUnit.MILLISECONDS.toMinutes(timeLeft) % 60
+
+            textCooldownTimer.visibility = View.VISIBLE
+            textCooldownTimer.text = "次まであと: ${hours}時間${minutes}分"
+
+            if (!lastResult.isNullOrEmpty()) {
+                textOmikujiResult.text = "本日の結果: ${lastResult.substringBefore("！")}\n(タップで詳細を表示)"
             }
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (::btnDrawOmikuji.isInitialized) {
-            checkOmikujiCooldown()
-        }
+    private fun showFashionFortuneDialog(msg: String) {
+        val v = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_fashion_fortune, null)
+        val d = AlertDialog.Builder(requireContext()).setView(v).create()
+        v.findViewById<TextView>(R.id.dialog_fortune_level).text = msg.substringBefore("！")
+        v.findViewById<TextView>(R.id.dialog_message).text = msg
+        v.findViewById<Button>(R.id.dialog_button).setOnClickListener { d.dismiss() }
+        d.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        d.show()
     }
 
-    // --- 検索機能 (修正箇所) ---
+    // --- カテゴリ詳細フィルタ ---
+    private fun showCategoryFilterDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_category_filter, null)
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
 
-    /**
-     * Webブラウザを開いて検索を実行する (★ 修正: 新規ブランドに対応)
-     */
-    private fun performWebSearch(brand: String, keyword: String) {
-        if (keyword.isBlank()) {
-            showToast("検索キーワードを入力してください。")
-            return
+        val chipGroup = dialogView.findViewById<ChipGroup>(R.id.chip_group_categories)
+        val btnClear = dialogView.findViewById<Button>(R.id.btn_filter_clear)
+        val btnApply = dialogView.findViewById<Button>(R.id.btn_filter_apply)
+
+        val categories = listOf(
+            "トップス", "シャツ", "Tシャツ", "ニット", "アウター", "コート", "ジャケット",
+            "パンツ", "デニム", "スラックス", "スカート", "ワンピース",
+            "シューズ", "スニーカー", "パンプス", "バッグ", "帽子", "アクセサリー", "時計", "ベルト",
+            "韓国コスメ"
+        )
+
+        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+        val bgColors = intArrayOf(ContextCompat.getColor(requireContext(), android.R.color.black), ContextCompat.getColor(requireContext(), android.R.color.white))
+        val textColors = intArrayOf(ContextCompat.getColor(requireContext(), android.R.color.white), ContextCompat.getColor(requireContext(), android.R.color.black))
+
+        categories.forEach { categoryName ->
+            val chip = Chip(requireContext()).apply {
+                text = categoryName
+                isCheckable = true
+                isCheckedIconVisible = false
+                chipStrokeWidth = 2f
+                chipStrokeColor = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
+                chipBackgroundColor = ColorStateList(states, bgColors)
+                setTextColor(ColorStateList(states, textColors))
+                rippleColor = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), android.R.color.darker_gray))
+            }
+            chipGroup.addView(chip)
         }
 
-        val encodedKeyword = Uri.encode(keyword)
+        btnClear.setOnClickListener {
+            chipGroup.clearCheck()
+            searchEditText.text.clear()
+            dialog.dismiss()
+        }
 
-        // ブランドごとの検索URLを生成
-        val baseUrl = when (brand) {
+        btnApply.setOnClickListener {
+            val selected = mutableListOf<String>()
+            for (i in 0 until chipGroup.childCount) {
+                val chip = chipGroup.getChildAt(i) as Chip
+                if (chip.isChecked) selected.add(chip.text.toString())
+            }
+            if (selected.isNotEmpty()) searchEditText.setText(selected.joinToString(" "))
+            dialog.dismiss()
+        }
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+    }
+
+    // --- 検索ロジック ---
+    private fun performWebSearch(brand: String, keyword: String) {
+        if (keyword.isBlank()) {
+            showToast("検索キーワードを入力してください")
+            return
+        }
+        val encodedKeyword = Uri.encode(keyword)
+        val url = when (brand) {
             "GU" -> "https://www.gu-global.com/jp/ja/search?q=$encodedKeyword"
             "ユニクロ" -> "https://www.uniqlo.com/jp/ja/search?q=$encodedKeyword"
             "Amazon" -> "https://www.amazon.co.jp/s?k=$encodedKeyword"
-            "ZOZO" -> "https://zozo.jp/category/$encodedKeyword/"
+            "ZOZO" -> "https://zozo.jp/sp/search/?p_keyv=$encodedKeyword"
             "楽天" -> "https://brandavenue.rakuten.co.jp/all-sites/item/?l-id=brn_searchmenu_filter_keyword&free_word=$encodedKeyword&inventory_flg=1"
             "GRL" -> "https://www.grail.bz/disp/tagitemlist/?tag=$encodedKeyword"
-            else -> {
-                showToast("無効なブランドです。")
-                return
-            }
+            else -> "https://www.google.com/search?q=${Uri.encode("$brand $keyword")}"
         }
-
-        // Intentを作成し、ブラウザを起動
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(baseUrl))
-            startActivity(intent)
-            showToast("$brand の「$keyword」を検索します。")
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: Exception) {
-            showToast("ブラウザを開けませんでした。")
-            e.printStackTrace()
+            showToast("ブラウザを開けませんでした")
         }
     }
 
-    /**
-     * 検索欄 (EditText) の機能を設定する
-     */
     private fun setupSearchListeners() {
-        searchEditText.setOnEditorActionListener { textView, actionId, _ ->
+        searchEditText.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                // デフォルトの検索先としてAmazonを使用
-                performWebSearch("Amazon", textView.text.toString())
+                performWebSearch("Amazon", v.text.toString())
                 true
-            } else {
-                false
-            }
+            } else false
         }
     }
 
-    /**
-     * ブランドボタンのクリックリスナーを設定する (★ 修正: 新規ブランドに対応)
-     */
     private fun setupBrandButtons(view: View) {
-        // 既存のブランドのTextViewを取得
-        val brandGu = view.findViewById<TextView>(R.id.text_brand_gu)
-        val brandUniqlo = view.findViewById<TextView>(R.id.text_brand_uniqlo)
-        val brandAmazon = view.findViewById<TextView>(R.id.text_brand_amazon)
-        val brandZozo = view.findViewById<TextView>(R.id.text_brand_zozo)
-
-        // ★ 追加ブランドのTextViewを取得
-        val brandRakuten = view.findViewById<TextView>(R.id.text_brand_rakuten)
-        val brandGrl = view.findViewById<TextView>(R.id.text_brand_grl)
-
-
-        // クリックリスナーを定義
-        val brandClickListener = View.OnClickListener { v ->
-            val brandName = (v as TextView).text.toString()
-            val keyword = searchEditText.text.toString() // 検索欄のキーワードを取得
-            performWebSearch(brandName, keyword)
-        }
-
-        // 各TextViewにリスナーを設定
-        brandGu.setOnClickListener(brandClickListener)
-        brandUniqlo.setOnClickListener(brandClickListener)
-        brandAmazon.setOnClickListener(brandClickListener)
-        brandZozo.setOnClickListener(brandClickListener)
-        brandRakuten.setOnClickListener(brandClickListener)
-        brandGrl.setOnClickListener(brandClickListener)
-    }
-
-    /**
-     * カテゴリ選択用のダイアログを表示する (★ 新規追加)
-     * ユーザーがトップスやパンツなどのカテゴリを選択し、検索キーワードに追加する
-     */
-    private fun showCategoryFilterDialog() {
-        // カテゴリリスト。ここに性別フィルターを追加することも可能
-        val categories = arrayOf("トップス", "アウター", "パンツ", "スカート", "シューズ", "バッグ", "全てクリア")
-
-        // アラートダイアログビルダーを使用
-        val builder = android.app.AlertDialog.Builder(requireContext())
-        builder.setTitle("カテゴリで絞り込む")
-
-        // 選択されたアイテムを一時的に保持するSet
-        val selectedItems = mutableSetOf<String>()
-
-        // 複数選択リストを設定
-        builder.setMultiChoiceItems(categories, null) { dialog, which, isChecked ->
-            val category = categories[which]
-
-            // 「全てクリア」が選択されたら他の選択を解除し、リストのチェックをクリア
-            if (category == "全てクリア") {
-                if (isChecked) {
-                    selectedItems.clear()
-                    // ダイアログの選択肢をクリアするために、一度ダイアログを閉じるか、カスタムビューを使用する必要がある
-                    // 簡単な実装では、この操作をキャンセルボタンに割り当てることが多いが、今回はリスト内操作として簡略化
-                }
-            } else {
-                if (isChecked) {
-                    selectedItems.add(category)
-                } else {
-                    selectedItems.remove(category)
-                }
+        val brandIds = listOf(R.id.text_brand_gu, R.id.text_brand_uniqlo, R.id.text_brand_amazon, R.id.text_brand_zozo, R.id.text_brand_rakuten, R.id.text_brand_grl)
+        brandIds.forEach { id ->
+            view.findViewById<TextView>(id)?.setOnClickListener { v ->
+                performWebSearch((v as TextView).text.toString(), searchEditText.text.toString())
             }
         }
-
-        // 確定ボタン
-        builder.setPositiveButton("検索キーワードに設定") { dialog, id ->
-            if (selectedItems.isNotEmpty()) {
-                val categoryString = selectedItems.joinToString(" ")
-
-                // 既存のキーワードの末尾にカテゴリを追加
-                val currentKeyword = searchEditText.text.toString().trim()
-
-                // 検索欄にセット
-                searchEditText.setText(if (currentKeyword.isBlank()) categoryString else "$currentKeyword $categoryString")
-                showToast("カテゴリ: $categoryString を検索キーワードに追加しました。")
-            } else {
-                showToast("カテゴリが選択されていません。")
-            }
-        }
-
-        // キャンセルボタン
-        builder.setNegativeButton("キャンセル") { dialog, id ->
-            dialog.cancel()
-        }
-
-        builder.create().show()
     }
 
-    // --- その他 (変更なし) ---
-    private fun showToast(message: String) {
-        context?.let {
-            Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
+    private fun showToast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+
+    private fun checkCameraPermissionAndDispatch() {
+        val permission = android.Manifest.permission.CAMERA
+        if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(requireActivity(), arrayOf(permission), PERMISSION_REQUEST_CODE)
+        } else {
+            dispatchTakePictureIntent()
+        }
+    }
+
+    private fun dispatchTakePictureIntent() {
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        try { startActivityForResult(intent, REQUEST_IMAGE_CAPTURE) }
+        catch (e: Exception) { showToast("カメラを起動できません") }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == Activity.RESULT_OK) {
+            parentFragmentManager.beginTransaction().replace(R.id.fragment_container, GalleryFragment()).commit()
+        }
+    }
+
+    private fun setupClearButtonFunctionality() {
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) {
+                val icon = if (s.isNullOrEmpty()) null else ContextCompat.getDrawable(requireContext(), R.drawable.outline_cancel_24)
+                searchEditText.setCompoundDrawablesWithIntrinsicBounds(null, null, icon, null)
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+        searchEditText.setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                val d = searchEditText.compoundDrawables[2]
+                if (d != null && event.rawX >= (searchEditText.right - d.bounds.width() - searchEditText.paddingEnd)) {
+                    searchEditText.text.clear()
+                    return@setOnTouchListener true
+                }
+            }
+            false
         }
     }
 }

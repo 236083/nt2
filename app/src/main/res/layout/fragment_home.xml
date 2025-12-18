@@ -73,8 +73,8 @@
 
             <EditText
                 android:id="@+id/edit_search"
-                android:layout_width="280dp"
-                android:layout_height="54dp"
+                android:layout_width="254dp"
+                android:layout_height="51dp"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="80dp"
                 android:background="@drawable/search_bar_background_inner"
@@ -86,25 +86,28 @@
                 android:paddingEnd="16dp"
                 android:singleLine="true"
                 android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_bias="0.0"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.081" />
 
             <ImageButton
                 android:id="@+id/button_filter"
                 android:layout_width="30dp"
                 android:layout_height="30dp"
-                android:layout_marginEnd="24dp"
                 android:adjustViewBounds="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="絞り込みボタン"
                 android:scaleType="fitCenter"
                 android:src="@drawable/shibori511_s_f"
-                android:tint="#333333"
                 app:layout_constraintBottom_toBottomOf="@+id/edit_search"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/edit_search" />
+                app:layout_constraintHorizontal_bias="0.951"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/edit_search"
+                app:layout_constraintVertical_bias="0.583" />
 
             <HorizontalScrollView
                 android:id="@+id/scroll_brands"
@@ -232,73 +235,68 @@
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/point_container"
-            android:layout_width="161dp"
+            android:layout_width="0dp"
             android:layout_height="106dp"
             android:layout_marginEnd="24dp"
             android:background="@drawable/card_block_background"
-            android:paddingStart="16dp"
-            android:paddingTop="12dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="12dp"
+            android:elevation="4dp"
+            android:padding="16dp"
             app:layout_constraintBottom_toBottomOf="@+id/my_gallery_block_container"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toEndOf="@+id/my_gallery_block_container"
             app:layout_constraintTop_toTopOf="@+id/my_gallery_block_container">
-
-            <ImageView
-                android:id="@+id/icon_point"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:contentDescription="Point Icon"
-                android:src="@drawable/outline_attach_money_24"
-                android:tint="#FFC107"
-                app:layout_constraintBottom_toTopOf="@+id/text_point_value"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_chainStyle="packed" />
 
             <TextView
                 android:id="@+id/text_point_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="保有ポイント："
-                android:textColor="@android:color/black"
-                android:textSize="14sp"
-                app:layout_constraintBottom_toBottomOf="@id/icon_point"
-                app:layout_constraintStart_toEndOf="@id/icon_point"
-                app:layout_constraintTop_toTopOf="@id/icon_point" />
+                android:text="保有ポイント"
+                android:textColor="#757575"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/text_point_value"
+            <LinearLayout
+                android:id="@+id/layout_point_display"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:gravity="end"
-                android:text="1,250 pt"
-                android:textColor="#FF9800"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/icon_point" />
+                app:layout_constraintTop_toBottomOf="@id/text_point_label">
+
+                <TextView
+                    android:id="@+id/text_point_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1,250"
+                    android:textColor="#FF9800"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="pt"
+                    android:textColor="#FF9800"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/text_point_detail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="詳細を確認 〉"
+                android:textColor="#007BFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
                 android:clickable="true"
                 android:focusable="true"
-                android:text="詳細 >"
-                android:textColor="#007BFF"
-                android:textSize="14sp"
+                android:paddingTop="8dp"
                 app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_bias="1.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.754" />
+                app:layout_constraintEnd_toEndOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -362,16 +360,15 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/fortune_block_container"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
+            android:layout_height="wrap_content" android:layout_marginStart="24dp"
             android:layout_marginTop="16dp"
             android:layout_marginEnd="24dp"
-            android:layout_marginBottom="16dp"
             android:background="@drawable/card_block_background"
             android:padding="16dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/ai_chat_block_container">
+
             <ImageView
                 android:id="@+id/icon_fortune"
                 android:layout_width="24dp"
@@ -387,42 +384,65 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="おみくじ"
+                android:text="今日のファッション運勢"
                 android:textColor="@android:color/black"
-                android:textSize="18sp"
-                android:textStyle="bold"
+                android:textSize="16sp" android:textStyle="bold"
                 app:layout_constraintBottom_toBottomOf="@id/icon_fortune"
                 app:layout_constraintStart_toEndOf="@id/icon_fortune"
                 app:layout_constraintTop_toTopOf="@id/icon_fortune" />
 
+            <View
+                android:id="@+id/divider_fortune"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="#E0E0E0"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/icon_fortune" />
+
             <TextView
                 android:id="@+id/text_omikuji_result"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:minLines="2"
+                android:layout_width="0dp"
+                android:layout_height="60dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:gravity="start|center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
                 android:text="ボタンを押して今日のファッション運を占おう！"
                 android:textColor="#333333"
-                android:textSize="16sp"
-                app:layout_constraintEnd_toEndOf="parent"
+                android:textSize="14sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/btn_draw_omikuji"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/text_fortune_title" />
-
+                app:layout_constraintTop_toBottomOf="@id/divider_fortune" />
             <Button
                 android:id="@+id/btn_draw_omikuji"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:backgroundTint="#FF9800"
-                android:minHeight="46dp"
-                android:text="おみくじを引く"
-                android:textColor="@android:color/white"
-                android:textSize="18sp"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp" android:backgroundTint="#FF9800"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="占う" android:textColor="@android:color/white"
+                android:textSize="14sp"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/text_omikuji_result" />
+                app:layout_constraintTop_toTopOf="@id/text_omikuji_result"
+                app:layout_constraintVertical_bias="0.5" />
+
+            <TextView
+                android:id="@+id/text_cooldown_timer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#FF0000"
+                android:textSize="11sp"
+                android:visibility="gone"
+                android:maxLines="1"
+                app:layout_constraintTop_toBottomOf="@id/btn_draw_omikuji"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginEnd="16dp" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
