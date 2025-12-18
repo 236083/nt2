@@ -2,30 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ========== FIX: Package Visibility (Android 11/API 30+) ========== -->
-    <!-- 外部のアプリ (Google Maps) を照会できるように、<queries> を追加します。 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <queries>
-        <!-- Google Maps アプリ (com.google.android.apps.maps) を照会できるようにします -->
         <package android:name="com.google.android.apps.maps" />
 
-        <!-- 一般的な GEO スキームのインテントを処理するアプリを問い合わせることを許可します -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="geo" />
         </intent>
+
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
     </queries>
-    <!-- ================================================================= -->
-
-    <!-- Webアクセス（検索機能）のためにインターネット権限を追加します -->
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- ========== FIX: 位置情報アクセス権限の追加（天気予報機能に必須） ========== -->
-    <!-- 精度の高いGPSに基づく位置情報へのアクセスを許可します -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <!-- ネットワーク（Wi-Fi, 基地局）に基づく位置情報へのアクセスを許可します -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- ========================================================================= -->
-
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -44,6 +41,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.nt2.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>

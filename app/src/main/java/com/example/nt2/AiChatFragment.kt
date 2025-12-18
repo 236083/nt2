@@ -12,21 +12,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
-// ★ 追加: 初期メッセージ表示のために必要
+// ★ 追加: ダイアログとトースト用
+import android.app.AlertDialog
+import android.widget.Toast
+
 import android.os.Handler
 import android.os.Looper
-import android.widget.TextView // ChatAdapterで使用する可能性のため追加 (今回は仮定義内)
 
 // =================================================================
-// ★ 【仮定義】データモデルとアダプター (実運用では別ファイルに分離推奨)
+// ★ 【仮定義】データモデルとアダプター (変更なし)
 // =================================================================
-
-/**
- * チャットメッセージのデータクラス
- * @param id メッセージID (タイムスタンプなど)
- * @param message メッセージ本文
- * @param isUser true: ユーザー発言, false: AI発言
- */
 data class ChatMessage(
     val id: Long,
     val message: String,
@@ -34,28 +29,20 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-/**
- * チャットRecyclerView用のアダプター (簡易版)
- */
 class ChatAdapter(private val messages: MutableList<ChatMessage>) :
     RecyclerView.Adapter<ChatAdapter.MessageViewHolder>() {
 
-    // item_message.xml が必要です。ここではTextViewを仮定します。
-    // item_message.xml には、ユーザー用とAI用のレイアウトを区別するビューが含まれる必要があります。
     private val VIEW_TYPE_USER = 1
     private val VIEW_TYPE_AI = 2
 
-    // ★ onCreateViewHolder: 適切なレイアウトをインフレートする必要があります
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
-        // TODO: ここをプロジェクトのitem_message.xmlで置き換えてください
+        // ここをプロジェクトのitem_message.xmlで置き換えてください
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false)
         return MessageViewHolder(view)
     }
 
-    // ★ onBindViewHolder: データに応じてビューを設定する必要があります
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-        val message = messages[position]
-        // TODO: holder.textView.text = message.message のような処理
+        // holder.textView.text = messages[position].message のような処理
     }
 
     override fun getItemCount(): Int = messages.size
@@ -64,14 +51,19 @@ class ChatAdapter(private val messages: MutableList<ChatMessage>) :
         return if (messages[position].isUser) VIEW_TYPE_USER else VIEW_TYPE_AI
     }
 
-    // ★ 新規メッセージを追加するメソッド
     fun addMessage(message: ChatMessage) {
         messages.add(message)
         notifyItemInserted(messages.size - 1)
     }
 
+    // ★ 修正: 全メッセージをクリアするメソッドを追加
+    fun clearAllMessages() {
+        messages.clear()
+        notifyDataSetChanged()
+    }
+
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        // TODO: item_message.xml内のTextViewなどをここにバインドします
+        //item_message.xml内のTextViewなどをここにバインドします
         // val textView: TextView = view.findViewById(R.id.text_message_content)
     }
 }
@@ -90,10 +82,16 @@ class AiChatFragment : Fragment() {
     private lateinit var buttonImageAnalysis: MaterialButton
     private lateinit var buttonBack: ImageButton
 
+    // ★ 新規追加: チャット履歴/テンプレートボタン
+    private lateinit var buttonClearChat: ImageButton
+    private lateinit var buttonTemplates: ImageButton
+
     // ★ 修正: ChatAdapterとメッセージリストを定義
     private lateinit var chatAdapter: ChatAdapter
     private val messageList = mutableListOf<ChatMessage>()
 
+    // ★ 新規追加: 現在のAIの性格を保持する変数
+    private var currentPersona: String = "優しめ" // 初期値
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -109,19 +107,23 @@ class AiChatFragment : Fragment() {
         buttonImageAnalysis = rootView.findViewById(R.id.button_image_analysis_generation)
         buttonBack = rootView.findViewById(R.id.button_back)
 
+        // ★ 新規追加: ボタンのバインド
+        buttonClearChat = rootView.findViewById(R.id.button_clear_chat)
+        buttonTemplates = rootView.findViewById(R.id.button_templates)
+
         // 2. RecyclerViewの初期設定
         setupRecyclerView()
 
         // 3. イベントリスナーの設定
         setupEventListeners()
 
-        // ★ 追加: 初期メッセージの表示をトリガー
+        // ★ 初期メッセージの表示をトリガー
         displayInitialAiMessage()
 
         return rootView
     }
 
-    // ... (onResume, onPause, onDestroyView は変更なし) ...
+    // ... (setBottomNavVisibility, onResume, onPause, onDestroyView は省略) ...
 
     private fun setBottomNavVisibility(isVisible: Boolean) {
         val activity = activity ?: return
@@ -145,11 +147,10 @@ class AiChatFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // ★ 修正: アダプターの初期化
         chatAdapter = ChatAdapter(messageList)
 
         recyclerViewChat.layoutManager = LinearLayoutManager(context).apply {
-            stackFromEnd = true // メッセージを下から上に積み上げる
+            stackFromEnd = true
         }
         recyclerViewChat.adapter = chatAdapter
     }
@@ -159,16 +160,28 @@ class AiChatFragment : Fragment() {
             sendMessage()
         }
 
+        // ★ 修正: AI性格変更ダイアログ
         buttonChangePersona.setOnClickListener {
-            // TODO: AIの性格変更ロジックを実装
+            showPersonaChangeDialog()
         }
 
         buttonImageAnalysis.setOnClickListener {
-            // TODO: 画像関連機能のロジックを実装
+            // 画像関連機能のロジックを実装
+            showToast("画像分析/生成機能は未実装です。")
         }
 
         buttonBack.setOnClickListener {
             parentFragmentManager.popBackStack()
+        }
+
+        // ★ 新規追加: チャット履歴クリア
+        buttonClearChat.setOnClickListener {
+            showClearChatConfirmationDialog()
+        }
+
+        // ★ 新規追加: テンプレート質問
+        buttonTemplates.setOnClickListener {
+            showTemplateQuestionsDialog()
         }
     }
 
@@ -176,21 +189,15 @@ class AiChatFragment : Fragment() {
         val messageText = editTextMessage.text.toString().trim()
 
         if (messageText.isNotEmpty()) {
-            // 1. ユーザーメッセージを作成
             val userMessage = ChatMessage(
                 id = System.currentTimeMillis(),
                 message = messageText,
                 isUser = true
             )
-
-            // 2. アダプターにメッセージを追加し、リストを更新
             chatAdapter.addMessage(userMessage)
             recyclerViewChat.scrollToPosition(chatAdapter.itemCount - 1)
-
-            // 3. 入力欄をクリア
             editTextMessage.setText("")
-
-            // TODO: 4. AIからの疑似応答をトリガー (例: callAiResponse(messageText))
+            //  4. AIからの疑似応答をトリガー (例: callAiResponse(messageText))
         }
     }
 
@@ -198,26 +205,104 @@ class AiChatFragment : Fragment() {
      * フラグメントが開かれたときにAIからの初期メッセージを表示する
      */
     private fun displayInitialAiMessage() {
-        // AIからのウェルカムメッセージを定義
         val welcomeMessage = "こんにちは！私はあなたの専属ファッションAIアドバイザーです。\n" +
                 "今日のコーデの相談や、持っている服を使った新しいスタイリングの提案、" +
                 "特定のアイテム（例：Tシャツ）のトレンド調査など、何でもお尋ねください！"
 
-        // AIメッセージオブジェクトを作成
         val initialAiMessage = ChatMessage(
             id = System.currentTimeMillis(),
             message = welcomeMessage,
-            isUser = false // AIからのメッセージ
+            isUser = false
         )
 
-        // 0.5秒の遅延を設けてメッセージをリストに追加し、自然な表示を演出
         Handler(Looper.getMainLooper()).postDelayed({
-            // アダプターが初期化されていることを確認してから追加
             if (::chatAdapter.isInitialized) {
                 chatAdapter.addMessage(initialAiMessage)
                 recyclerViewChat.scrollToPosition(chatAdapter.itemCount - 1)
             }
-        }, 500) // 0.5秒後に実行
+        }, 500)
+    }
+
+    // =================================================================
+    // ★ 新規追加: ダイアログと機能のロジック
+    // =================================================================
+
+    /**
+     * AIの性格（ペルソナ）を変更するための選択ダイアログを表示する。
+     */
+    private fun showPersonaChangeDialog() {
+        val personas = arrayOf("優しめ", "辛口", "毒舌")
+        val checkedItem = personas.indexOf(currentPersona)
+
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("AIの話し方を変える")
+            .setSingleChoiceItems(personas, checkedItem) { dialog, which ->
+                currentPersona = personas[which]
+            }
+            .setPositiveButton("決定") { dialog, id ->
+                showToast("AIの話し方を「$currentPersona」に変更しました。")
+                //  AIのバックエンド設定を新しいペルソナで更新するロジックを実装
+            }
+            .setNegativeButton("キャンセル") { dialog, id ->
+                dialog.cancel()
+            }
+
+        builder.create().show()
+    }
+
+    /**
+     * チャット履歴削除の確認ダイアログを表示する。
+     */
+    private fun showClearChatConfirmationDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("チャット履歴の削除")
+            .setMessage("チャット履歴をすべて削除しますか？\n(AIの記憶はリセットされません)")
+            .setPositiveButton("削除") { dialog, id ->
+                if (::chatAdapter.isInitialized) {
+                    chatAdapter.clearAllMessages()
+                    showToast("チャット履歴を削除しました。")
+                    // 削除後、AIの初期メッセージを再表示する
+                    displayInitialAiMessage()
+                }
+            }
+            .setNegativeButton("キャンセル") { dialog, id ->
+                dialog.cancel()
+            }
+        builder.create().show()
+    }
+
+    /**
+     * テンプレート質問リストを表示し、選択した質問をEditTextに設定する。
+     */
+    private fun showTemplateQuestionsDialog() {
+        val templates = arrayOf(
+            "この白いTシャツに合うアウターを3つ提案して。",
+            "今日のトレンドカラーは何ですか？",
+            "持っているデニムジャケットを使った着回しコーデを見せて。",
+            "「優しめ」モードでの今日の運勢を教えて。",
+            "オフィスカジュアルに合う、春の新作バッグを探して。"
+        )
+
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setTitle("質問テンプレート")
+            .setItems(templates) { dialog, which ->
+                val selectedTemplate = templates[which]
+                editTextMessage.setText(selectedTemplate)
+                showToast("質問をメッセージ欄に設定しました。")
+            }
+            .setNegativeButton("閉じる") { dialog, id ->
+                dialog.cancel()
+            }
+        builder.create().show()
+    }
+
+    /**
+     * トーストメッセージを表示するヘルパー関数
+     */
+    private fun showToast(message: String) {
+        context?.let {
+            Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
 

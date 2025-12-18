@@ -1,111 +1,128 @@
 package com.example.nt2
 
+import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ScrollView
-import android.widget.Toast
+import android.widget.*
 import androidx.fragment.app.Fragment
-import com.example.nt2.databinding.FragmentAddBinding
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * カレンダー画面Fragmentです。
- * カレンダー表示、日付選択、および新規作成ボタンによる入力欄の表示を担当します。
- */
 class AddFragment : Fragment() {
 
-    private var _binding: FragmentAddBinding? = null
-    // View Binding のゲッター
-    private val binding get() = _binding!!
+    data class Schedule(var title: String, var content: String)
+    private val scheduleMap = mutableMapOf<String, Schedule>()
+    private var selectedDate: String = ""
 
-    // 現在選択されている日付を保持 (保存ログ用)
-    private var selectedDateString: String = ""
+    // 各Viewの宣言
+    private lateinit var btnAdd: View
+    private lateinit var layoutButtons: View
+    private lateinit var layoutDetail: View
+    private lateinit var textTitle: TextView
+    private lateinit var textContent: TextView
+    private lateinit var textSelectedDate: TextView
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        // View Binding を初期化
-        _binding = FragmentAddBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return inflater.inflate(R.layout.fragment_add, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 初期表示: 今日の日付を表示
-        val todayFormatter = SimpleDateFormat("yyyy年M月d日", Locale.JAPAN)
-        selectedDateString = todayFormatter.format(Date())
-        binding.textSelectedDate.text = selectedDateString
+        // Viewの初期化（IDがレイアウトと一致しているか確認してください）
+        val calendarView = view.findViewById<CalendarView>(R.id.calendarView)
+        textSelectedDate = view.findViewById(R.id.textSelectedDate)
+        btnAdd = view.findViewById(R.id.btn_add_schedule)
+        layoutButtons = view.findViewById(R.id.layout_edit_delete_buttons) // ここが重要
+        layoutDetail = view.findViewById(R.id.layout_schedule_detail)
+        textTitle = view.findViewById(R.id.text_schedule_title)
+        textContent = view.findViewById(R.id.text_schedule_content)
+        val btnEdit = view.findViewById<Button>(R.id.btn_edit_schedule)
+        val btnDelete = view.findViewById<ImageButton>(R.id.btn_delete_schedule)
 
-        // 初期状態では入力コンテナを非表示にしておく
-        binding.inputContainerCard.visibility = View.GONE
+        // 初期表示設定
+        val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.JAPAN)
+        selectedDate = sdf.format(Date(calendarView.date))
+        textSelectedDate.text = selectedDate
+        updateUI()
 
-
-
-        // CalendarView Listener: 日付を選択した際の処理
-        binding.calendarView.setOnDateChangeListener { _, year, month, dayOfMonth ->
-            // 選択された日付をCalendarオブジェクトで取得
-            val calendar = Calendar.getInstance().apply {
-                // CalendarViewのmonthは0-indexed (0=1月, 11=12月)
-                set(year, month, dayOfMonth)
-            }
-
-            // 日付を「yyyy年M月d日」形式にフォーマット
-            val dateFormat = SimpleDateFormat("yyyy年M月d日", Locale.JAPAN)
-            selectedDateString = dateFormat.format(calendar.time)
-
-            // 1. テキストビューに表示を更新
-            binding.textSelectedDate.text = selectedDateString
-
-            // 【バグ修正ロジック】: 新規作成モード中に別の日付を選択した場合、入力欄を非表示に戻す
-            if (binding.inputContainerCard.visibility == View.VISIBLE) {
-                // 入力欄を非表示に戻す
-                binding.inputContainerCard.visibility = View.GONE
-                Toast.makeText(context, "新規作成モードをリセットしました", Toast.LENGTH_SHORT).show()
-            }
+        // 日付選択イベント
+        calendarView.setOnDateChangeListener { _, year, month, dayOfMonth ->
+            selectedDate = "${year}年${month + 1}月${dayOfMonth}日"
+            textSelectedDate.text = selectedDate
+            updateUI()
         }
 
-        // 新規メモ作成ボタンのクリックリスナー
-        binding.buttonNewMemo.setOnClickListener {
-            // 入力コンテナを表示する
-            binding.inputContainerCard.visibility = View.VISIBLE
-
-            // 入力欄をクリアする (新しいメモ作成のため)
-            binding.editTitle.setText("")
-            binding.editContent.setText("")
-
-            // (オプション) 入力欄までスムーズにスクロール
-            (binding.root.parent as? ScrollView)?.post {
-                binding.inputContainerCard.requestFocus()
-            }
+        // 新規作成
+        btnAdd.setOnClickListener {
+            showEditDialog(null) { updateUI() }
         }
 
-        // 保存ボタンのクリックリスナー
-        binding.buttonSave.setOnClickListener {
-            val title = binding.editTitle.text.toString().trim()
-            val content = binding.editContent.text.toString().trim()
+        // 編集
+        btnEdit.setOnClickListener {
+            showEditDialog(scheduleMap[selectedDate]) { updateUI() }
+        }
 
-            if (title.isNotEmpty() || content.isNotEmpty()) {
-                // 実際にはここでデータを保存します
-                Log.d("AddFragment", "保存されました - 日付: $selectedDateString, タイトル: $title, 内容: $content")
-                Toast.makeText(context, "「$title」を保存しました", Toast.LENGTH_SHORT).show()
-
-                // 保存後、入力欄を非表示にする
-                binding.inputContainerCard.visibility = View.GONE
-
-            } else {
-                Toast.makeText(context, "タイトルか内容を入力してください", Toast.LENGTH_SHORT).show()
-            }
+        // 削除
+        btnDelete.setOnClickListener {
+            scheduleMap.remove(selectedDate)
+            updateUI()
+            Toast.makeText(requireContext(), "削除しました", Toast.LENGTH_SHORT).show()
         }
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    // UIの表示切り替えロジック
+    private fun updateUI() {
+        val schedule = scheduleMap[selectedDate]
+        if (schedule == null) {
+            // 予定がない場合：追加ボタンを表示、編集削除ボタンと詳細を隠す
+            btnAdd.visibility = View.VISIBLE
+            layoutButtons.visibility = View.GONE
+            layoutDetail.visibility = View.GONE
+        } else {
+            // 予定がある場合：追加ボタンを隠し、編集削除ボタンと詳細を表示
+            btnAdd.visibility = View.GONE
+            layoutButtons.visibility = View.VISIBLE
+            layoutDetail.visibility = View.VISIBLE
+            textTitle.text = schedule.title
+            textContent.text = schedule.content
+        }
+    }
+
+    private fun showEditDialog(existing: Schedule?, onSave: () -> Unit) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edit_schedule, null)
+        val editTitle = dialogView.findViewById<EditText>(R.id.edit_dialog_title)
+        val editContent = dialogView.findViewById<EditText>(R.id.edit_dialog_content)
+        val titleDisplay = dialogView.findViewById<TextView>(R.id.dialog_title_text)
+
+        val btnCancel = dialogView.findViewById<View>(R.id.btn_dialog_cancel)
+        val btnSave = dialogView.findViewById<View>(R.id.btn_dialog_save)
+
+        if (existing != null) {
+            titleDisplay.text = "予定を編集"
+            editTitle.setText(existing.title)
+            editContent.setText(existing.content)
+        } else {
+            titleDisplay.text = "新規作成 (${selectedDate})"
+        }
+
+        val dialog = AlertDialog.Builder(requireContext()).setView(dialogView).create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnSave.setOnClickListener {
+            val t = editTitle.text.toString()
+            val c = editContent.text.toString()
+            if (t.isNotBlank()) {
+                scheduleMap[selectedDate] = Schedule(t, c)
+                onSave()
+                dialog.dismiss()
+            } else {
+                editTitle.error = "タイトルを入力してください"
+            }
+        }
     }
 }
